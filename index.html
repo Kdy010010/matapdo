@@ -72,7 +72,7 @@
   #room .mode{color:var(--gold);font-weight:700}
   #players{margin-top:6px;font-size:11px;color:var(--muted);line-height:1.6}
   #ctrl{position:fixed;right:12px;bottom:12px;z-index:20;display:flex;flex-direction:column;gap:6px;align-items:flex-end}
-  .skillbar{display:flex;gap:6px}
+  .skillbar{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;max-width:420px}
   .skill{width:46px;height:46px;border-radius:10px;background:rgba(20,20,48,.9);border:1px solid var(--line);
     display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:18px;cursor:pointer;position:relative}
   .skill .k{position:absolute;top:2px;left:4px;font-size:9px;color:var(--arcane2)}
@@ -163,7 +163,7 @@
     <div class="hint"><b>조작</b> (모바일은 화면 왼쪽 조이스틱 + 오른쪽 스킬 버튼)<br>
       이동 <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>/방향키 · 스킬 <kbd>J</kbd><kbd>K</kbd><kbd>L</kbd><kbd>U</kbd><kbd>I</kbd><br>
       상호작용 <kbd>E</kbd> · 채팅 <kbd>Enter</kbd> · 레벨업 시 <b>스킬 수련소</b>에서 새 스킬 습득<br>
-      마을 → 여러 <b>사냥터</b>(주기적 리젠) 또는 6속성 <b>마탑 30층</b>. 진행 자동 저장.</div>
+      마을 → 여러 <b>사냥터</b> · 신규 <b>미로</b>(몬스터 사냥) 또는 12속성 <b>마탑 300층</b>. 진행 자동 저장.</div>
   </div>
 </div>
 
@@ -211,6 +211,14 @@
   <button class="btn ghost" onclick="closeModal()">닫기</button>
 </div></div>
 
+<div class="modal" id="mazeModal"><div class="card">
+  <span class="x" onclick="closeModal()">✕</span>
+  <div class="logo"><div class="tower">🌀</div><h1 style="font-size:22px;letter-spacing:2px">미로 선택</h1></div>
+  <div class="sub" style="margin-bottom:6px">뒤엉킨 미로를 헤치며 몬스터를 사냥하세요</div>
+  <div id="mazeList"></div>
+  <button class="btn ghost" onclick="closeModal()">닫기</button>
+</div></div>
+
 <!-- 현자 -->
 <div class="modal" id="npcModal"><div class="card">
   <span class="x" onclick="closeModal()">✕</span>
@@ -251,49 +259,132 @@ ROBES.forEach((c,i)=>{const s=document.createElement('div');s.className='swatch'
 /* ---------- 몬스터 도감 (종류 다수) ---------- */
 function M(ico,hp,atk,spd,exp,gold,r){return{ico,hp,atk,spd,exp,gold,r};}
 const MTYPES={
-  // 일반 사냥터
+  // ===== 일반 사냥터 =====
   rat:M('🐀',14,4,1.6,4,2,12), bat:M('🦇',20,6,1.7,6,3,13), spider:M('🕷️',28,8,1.4,9,5,14),
   wolf:M('🐺',40,9,1.9,11,6,16), slime:M('🟢',55,7,1.0,13,7,17), snake:M('🐍',30,10,1.5,11,7,14),
   scorpion:M('🦂',36,11,1.3,13,8,14), boar:M('🐗',70,13,1.7,18,11,18), bee:M('🐝',16,7,2.2,7,4,11),
   goblin:M('👺',46,11,1.6,15,11,15), mushroom:M('🍄',62,8,0.6,15,9,16), frog:M('🐸',34,7,1.4,10,6,14),
   bear:M('🐻',115,16,1.4,30,20,20), ghost:M('👻',50,12,1.6,15,9,16),
-  // 불
+  hornet:M('🐝',24,10,2.4,9,5,12), crow:M('🐦‍⬛',26,9,2.0,9,5,13), lizard:M('🦎',32,9,1.7,10,6,14),
+  beetle:M('🪲',44,9,1.1,12,7,15), rabbit:M('🐇',18,5,2.3,6,4,12), hedgehog:M('🦔',38,10,1.2,12,8,13),
+
+  // ===== 🔥 불꽃 =====
   imp:M('👹',44,14,1.6,17,11,15), salamander:M('🦎',62,15,1.4,19,12,16),
-  magmite:M('🌋',84,17,0.9,24,15,17), emberhound:M('🐕',52,16,1.9,21,13,16), firedrake:M('🐉',430,30,1.3,150,110,30),
-  // 물
+  magmite:M('🌋',84,17,0.9,24,15,17), emberhound:M('🐕',52,16,1.9,21,13,16),
+  cinderbat:M('🦇',40,15,2.1,18,11,13), lavaslug:M('🐌',98,14,0.6,24,15,18),
+  flamefox:M('🦊',58,17,2.0,22,14,15), ifritling:M('🔥',74,18,1.5,26,17,16),
+  firedrake:M('🐉',430,30,1.3,150,110,30),
+
+  // ===== 🌊 심해 =====
   piranha:M('🐠',46,13,1.9,17,11,14), octopus:M('🐙',78,16,1.1,24,15,18),
-  squid:M('🦑',62,14,1.5,20,13,16), puffer:M('🐡',56,12,1.0,18,12,15), leviathan:M('🐋',500,32,1.1,160,120,34),
-  // 전기
+  squid:M('🦑',62,14,1.5,20,13,16), puffer:M('🐡',56,12,1.0,18,12,15),
+  jellyfish:M('🪼',50,15,1.3,19,12,15), crab:M('🦀',72,14,1.0,22,14,16),
+  seahorse:M('🐚',48,13,1.7,18,11,14), anglerfish:M('🐟',86,17,1.2,26,17,17),
+  leviathan:M('🐋',500,32,1.1,160,120,34),
+
+  // ===== ⚡ 뇌전 =====
   sparkwisp:M('⚡',42,16,2.0,19,12,13), thunderhawk:M('🦅',56,15,2.2,21,14,15),
-  volthound:M('🐺',62,17,2.0,23,15,16), raiju:M('🐲',84,18,1.8,27,17,17), stormdrake:M('🐉',540,34,1.5,170,130,32),
-  // 흙
+  volthound:M('🐺',62,17,2.0,23,15,16), raiju:M('🐲',84,18,1.8,27,17,17),
+  volteel:M('🐍',58,17,1.9,22,14,15), chargebug:M('🪰',40,16,2.5,18,11,12),
+  tesladrone:M('🛸',70,18,1.7,25,16,16), boltsprite:M('✨',48,17,2.3,21,13,13),
+  stormdrake:M('🐉',540,34,1.5,170,130,32),
+
+  // ===== 🪨 대지 =====
   pebble:M('🪨',72,12,0.7,17,11,15), rockgolem:M('🗿',150,21,0.8,36,24,21),
-  rhino:M('🦏',126,22,1.6,34,22,20), treant:M('🌳',168,18,0.6,38,26,22), titan:M('🦣',680,38,1.0,190,150,36),
-  // 공기
+  rhino:M('🦏',126,22,1.6,34,22,20), treant:M('🌳',168,18,0.6,38,26,22),
+  armadillo:M('🦔',96,18,1.1,26,17,17), mole:M('🐀',80,16,1.4,24,15,16),
+  boulderbeast:M('🪨',180,20,0.7,40,27,22), clayman:M('🧱',110,19,1.0,30,20,18),
+  titan:M('🦣',680,38,1.0,190,150,36),
+
+  // ===== 🌪️ 질풍 =====
   harpy:M('🦅',60,16,2.1,22,14,16), wisp:M('🕊️',46,14,2.3,18,12,13),
-  galehawk:M('🦅',56,16,2.4,21,14,15), sylph:M('🧚',52,18,2.1,23,15,15), roc:M('🌪️',580,36,1.6,180,140,34),
-  // 어둠
+  galehawk:M('🦅',56,16,2.4,21,14,15), sylph:M('🧚',52,18,2.1,23,15,15),
+  zephyr:M('💨',44,16,2.6,19,12,13), cloudray:M('☁️',66,15,1.9,23,15,16),
+  windserpent:M('🐉',74,18,2.2,26,17,16), feathermon:M('🪶',50,16,2.4,20,13,14),
+  roc:M('🌪️',580,36,1.6,180,140,34),
+
+  // ===== 🌑 어둠 =====
   shade:M('👻',58,16,1.7,23,15,16), skeleton:M('💀',72,17,1.5,25,16,16),
-  vampire:M('🧛',94,20,1.8,32,22,18), reaper:M('🦇',84,19,1.9,29,19,17), darkknight:M('🧟',640,40,1.4,190,160,32),
-  lord:M('😈',1700,46,1.4,1300,950,42),
+  vampire:M('🧛',94,20,1.8,32,22,18), reaper:M('🦇',84,19,1.9,29,19,17),
+  wraith:M('🌫️',66,18,1.8,24,16,16), bonelord:M('☠️',100,20,1.4,33,22,18),
+  nightcrawler:M('🐛',78,18,1.6,27,18,16), gravesoul:M('⚰️',88,19,1.5,30,20,17),
+  darkknight:M('🧟',640,40,1.4,190,160,32),
+
+  // ===== ❄️ 빙결 =====
+  frostling:M('🧊',58,16,1.5,22,14,15), icewolf:M('🐺',78,18,1.9,28,18,17),
+  snowowl:M('🦉',54,16,2.0,22,14,15), yeti:M('🧌',140,22,1.2,38,26,21),
+  frostmoth:M('🦋',50,15,2.1,20,13,14), glacialcrab:M('🦀',96,19,1.0,30,20,17),
+  rimewraith:M('👻',72,18,1.7,26,17,16), iciclebat:M('🦇',56,17,2.0,22,14,14),
+  glacialdragon:M('🐲',620,38,1.2,185,145,33),
+
+  // ===== ☠️ 맹독 =====
+  venomspider:M('🕷️',64,18,1.6,24,16,15), poisontoad:M('🐸',82,16,1.2,28,18,16),
+  venomwasp:M('🐝',50,18,2.4,22,14,13), cobra:M('🐍',70,20,1.7,28,18,16),
+  toxicslime:M('🟣',110,15,0.8,30,20,18), bloomtoxic:M('🌺',88,17,1.0,29,19,17),
+  centipede:M('🐛',76,19,1.8,27,18,16), gasmite:M('💨',60,18,1.9,24,16,15),
+  basilisk:M('🐍',660,40,1.5,190,150,32),
+
+  // ===== ⚙️ 강철 =====
+  ironbeetle:M('🪲',110,18,1.0,30,22,17), sentinel:M('🛡️',150,22,0.9,40,28,20),
+  bladebot:M('🤺',96,22,1.6,32,22,17), automaton:M('🤖',170,24,1.0,44,30,21),
+  drillbot:M('🪛',104,21,1.3,32,22,17), gearhound:M('🐕',90,20,1.8,30,20,16),
+  turret:M('🔫',120,23,0.7,36,25,18), shieldbot:M('🛡️',160,20,0.8,40,28,20),
+  ironcolossus:M('🤖',760,42,0.9,210,170,36),
+
+  // ===== ✨ 신성 =====
+  cherub:M('👼',80,18,1.7,28,18,16), lightwisp:M('🌟',64,17,2.1,24,16,14),
+  seraphling:M('😇',96,20,1.6,32,22,18), guardianspirit:M('🕊️',88,19,1.5,30,20,17),
+  haloray:M('💫',70,18,2.0,26,17,15), sunbird:M('🐦',72,19,2.2,27,18,16),
+  prism:M('🔆',76,18,1.4,28,18,16), beacon:M('🪔',84,17,1.0,28,19,17),
+  archangel:M('👼',700,40,1.4,200,160,33),
+
+  // ===== 🔮 환영 =====
+  manawisp:M('🔮',76,19,1.9,28,18,15), spellbook:M('📕',92,18,1.0,30,20,17),
+  floateye:M('👁️',70,20,1.8,28,18,15), mirrorghost:M('🪞',84,19,1.7,29,19,16),
+  runeorb:M('🟣',80,19,1.6,28,18,16), hexcat:M('🐈‍⬛',72,20,2.0,28,18,15),
+  glyphwing:M('📜',78,18,2.0,27,18,15), arcaneturret:M('🟪',96,21,1.2,33,22,17),
+  archmage:M('🧙',720,42,1.5,210,170,32),
+
+  // ===== 🌌 공허/혼돈 =====
+  voidling:M('🌑',96,22,1.8,34,24,17), abomination:M('🦠',170,24,1.0,46,32,21),
+  horror:M('🫥',120,24,1.6,38,26,18), nightmare:M('🐴',130,25,1.9,40,28,19),
+  voideye:M('👁️',104,23,1.7,35,24,17), chaosmaw:M('🕳️',150,24,1.2,44,30,20),
+  riftspawn:M('🌀',112,24,1.8,37,25,18), entropling:M('💫',100,23,2.0,34,23,17),
+  voidlord:M('🌌',820,46,1.4,230,190,36),
+
+  // ===== 마일스톤 / 최종 보스 =====
+  lord:M('😈',900,42,1.4,600,420,42),
+  voidsovereign:M('🌌',2400,52,1.4,9000,6000,52),
 };
 
-/* ---------- 마탑 6속성 ---------- */
+/* ---------- 마탑 12속성 ---------- */
 const ELEMENTS=[
- {name:'불꽃의 층',icon:'🔥',pool:['imp','salamander','magmite','emberhound'],boss:'firedrake',
+ {name:'불꽃의 층',icon:'🔥',pool:['imp','salamander','magmite','emberhound','cinderbat','lavaslug','flamefox','ifritling'],boss:'firedrake',
   theme:{bg:'#1a0a0a',floorA:'#3a1410',floorB:'#2e0f0c',wall:'#5a2418',wallTop:'#8a3a22',glow:'rgba(255,120,40,.3)'}},
- {name:'심해의 층',icon:'🌊',pool:['piranha','octopus','squid','puffer'],boss:'leviathan',
+ {name:'심해의 층',icon:'🌊',pool:['piranha','octopus','squid','puffer','jellyfish','crab','seahorse','anglerfish'],boss:'leviathan',
   theme:{bg:'#061522',floorA:'#0d2b44',floorB:'#0a2236',wall:'#134a6b',wallTop:'#1f6f9b',glow:'rgba(60,160,255,.3)'}},
- {name:'뇌전의 층',icon:'⚡',pool:['sparkwisp','thunderhawk','volthound','raiju'],boss:'stormdrake',
+ {name:'뇌전의 층',icon:'⚡',pool:['sparkwisp','thunderhawk','volthound','raiju','volteel','chargebug','tesladrone','boltsprite'],boss:'stormdrake',
   theme:{bg:'#15102a',floorA:'#2a2150',floorB:'#221a44',wall:'#4a3a7a',wallTop:'#9a7fe0',glow:'rgba(255,230,90,.3)'}},
- {name:'대지의 층',icon:'🪨',pool:['pebble','rockgolem','rhino','treant'],boss:'titan',
+ {name:'대지의 층',icon:'🪨',pool:['pebble','rockgolem','rhino','treant','armadillo','mole','boulderbeast','clayman'],boss:'titan',
   theme:{bg:'#14110a',floorA:'#2e2614',floorB:'#261f10',wall:'#4a3a1f',wallTop:'#6b5a2c',glow:'rgba(160,130,60,.3)'}},
- {name:'질풍의 층',icon:'🌪️',pool:['harpy','wisp','galehawk','sylph'],boss:'roc',
+ {name:'질풍의 층',icon:'🌪️',pool:['harpy','wisp','galehawk','sylph','zephyr','cloudray','windserpent','feathermon'],boss:'roc',
   theme:{bg:'#0c1620',floorA:'#1b2c3a',floorB:'#16242f',wall:'#2c4a5a',wallTop:'#5a8a9a',glow:'rgba(150,220,240,.3)'}},
- {name:'어둠의 층',icon:'🌑',pool:['shade','skeleton','vampire','reaper'],boss:'darkknight',
+ {name:'어둠의 층',icon:'🌑',pool:['shade','skeleton','vampire','reaper','wraith','bonelord','nightcrawler','gravesoul'],boss:'darkknight',
   theme:{bg:'#0a0612',floorA:'#170f24',floorB:'#120b1c',wall:'#2a1a3a',wallTop:'#5a3f7a',glow:'rgba(157,90,255,.3)'}},
+ {name:'빙결의 층',icon:'❄️',pool:['frostling','icewolf','snowowl','yeti','frostmoth','glacialcrab','rimewraith','iciclebat'],boss:'glacialdragon',
+  theme:{bg:'#08141e',floorA:'#13314a',floorB:'#0f2738',wall:'#1f5070',wallTop:'#3f86b0',glow:'rgba(150,220,255,.3)'}},
+ {name:'맹독의 층',icon:'☠️',pool:['venomspider','poisontoad','venomwasp','cobra','toxicslime','bloomtoxic','centipede','gasmite'],boss:'basilisk',
+  theme:{bg:'#0c160a',floorA:'#1c2e14',floorB:'#162610',wall:'#2e4a1f',wallTop:'#4f7a2c',glow:'rgba(140,255,90,.3)'}},
+ {name:'강철의 층',icon:'⚙️',pool:['ironbeetle','sentinel','bladebot','automaton','drillbot','gearhound','turret','shieldbot'],boss:'ironcolossus',
+  theme:{bg:'#101216',floorA:'#222730',floorB:'#1b1f26',wall:'#3a424f',wallTop:'#5a6573',glow:'rgba(180,200,220,.28)'}},
+ {name:'신성의 층',icon:'✨',pool:['cherub','lightwisp','seraphling','guardianspirit','haloray','sunbird','prism','beacon'],boss:'archangel',
+  theme:{bg:'#1a160a',floorA:'#3a3018',floorB:'#2e2612',wall:'#5a4a24',wallTop:'#b09040',glow:'rgba(255,230,140,.32)'}},
+ {name:'환영의 층',icon:'🔮',pool:['manawisp','spellbook','floateye','mirrorghost','runeorb','hexcat','glyphwing','arcaneturret'],boss:'archmage',
+  theme:{bg:'#140a1e',floorA:'#2a163a',floorB:'#22102e',wall:'#4a2470',wallTop:'#8a4fc0',glow:'rgba(200,120,255,.3)'}},
+ {name:'공허의 층',icon:'🌌',pool:['voidling','abomination','horror','nightmare','voideye','chaosmaw','riftspawn','entropling'],boss:'voidlord',
+  theme:{bg:'#06060f',floorA:'#12121e',floorB:'#0d0d18',wall:'#22223a',wallTop:'#44307a',glow:'rgba(120,90,200,.32)'}},
 ];
-function elementOf(floor){return ELEMENTS[Math.min(5,Math.floor((floor-1)/5))];}
+function elementOf(floor){return ELEMENTS[Math.floor((floor-1)/5)%ELEMENTS.length];}
 
 /* ---------- 사냥터 다수 ---------- */
 const HUNT_ZONES=[
@@ -310,6 +401,36 @@ const HUNT_ZONES=[
  {id:'ruins',name:'잊혀진 폐허',icon:'🏚️',tier:12,recLv:22,pool:['ghost','skeleton','goblin','shade','bat'],
   theme:{bg:'#0a0a14',floorA:'#18181f',floorB:'#131318',wall:'#2a2a3a',wallTop:'#44445a'},dens:0.13,water:false},
 ];
+
+/* ---------- 미로 (신규 컨텐츠) ---------- */
+const MAZE_ZONES=[
+ {id:'hedge',name:'뒤틀린 미궁',icon:'🌀',tier:5,recLv:7,W:29,H:21,pool:['goblin','spider','bat','snake','slime','wolf'],
+  theme:{bg:'#0a1410',floorA:'#15281c',floorB:'#102016',wall:'#1e4a30',wallTop:'#2c6b44'}},
+ {id:'crypt',name:'지하 묘소 미로',icon:'🪦',tier:10,recLv:16,W:33,H:23,pool:['skeleton','ghost','shade','reaper','bonelord','mushroom'],
+  theme:{bg:'#0a0a12',floorA:'#17171f',floorB:'#121219',wall:'#2a2438',wallTop:'#443a5a'}},
+ {id:'astral',name:'환영의 미궁',icon:'🔮',tier:16,recLv:26,W:35,H:25,pool:['manawisp','floateye','mirrorghost','hexcat','arcaneturret','scorpion'],
+  theme:{bg:'#120a1e',floorA:'#26163a',floorB:'#1d102e',wall:'#462470',wallTop:'#8a4fc0'}},
+];
+
+function buildMaze(zone){
+  const W=zone.W,H=zone.H,g=makeGrid(W,H,1),t=zone.theme;
+  let seed=zone.id.length*131+7;
+  function rnd(){seed=(seed*1103515245+12345)&0x7fffffff;return seed/0x7fffffff;}
+  // DFS 백트래킹으로 미로 통로를 판다 (홀수 칸 기준)
+  g[1][1]=0;const stack=[[1,1]],dirs=[[0,-2],[0,2],[-2,0],[2,0]];
+  while(stack.length){const c=stack[stack.length-1];const opts=[];
+    for(const d of dirs){const nx=c[0]+d[0],ny=c[1]+d[1];
+      if(nx>0&&ny>0&&nx<W-1&&ny<H-1&&g[ny][nx]===1)opts.push([nx,ny,c[0]+d[0]/2,c[1]+d[1]/2]);}
+    if(opts.length){const o=opts[Math.floor(rnd()*opts.length)];g[o[3]][o[2]]=0;g[o[1]][o[0]]=0;stack.push([o[0],o[1]]);}
+    else stack.pop();}
+  // 막다른 길을 일부 터서 순환로를 만든다 (너무 답답하지 않게)
+  for(let i=0;i<W*H*0.05;i++){const x=1+Math.floor(rnd()*(W-2)),y=1+Math.floor(rnd()*(H-2));
+    if(((x%2)+(y%2))===1)g[y][x]=0;}
+  const objs=[{type:'portal',x:1,y:1,to:'village',label:'마을',ico:'🏘️'},
+              {type:'mazeHub',x:W-2,y:H-2,label:'다른 미로',ico:'🌀'}];
+  return finalize({name:zone.name,area:'maze',mazeId:zone.id,icon:zone.icon,g,W,H,objs,spawn:{x:1,y:1},
+    bg:t.bg,floorA:t.floorA,floorB:t.floorB,wall:t.wall,wallTop:t.wallTop,mon:true,tier:zone.tier});
+}
 
 /* ---------- 맵 생성 ---------- */
 function makeGrid(w,h,fill){const g=[];for(let y=0;y<h;y++)g.push(new Array(w).fill(fill));
@@ -334,6 +455,7 @@ function buildVillage(){
   [[3,3],[4,3],[3,4],[21,3],[22,3],[22,4],[3,15],[4,15],[3,16],[21,15],[22,15],[22,16]].forEach(([x,y])=>g[y][x]=1);
   const objs=[
     {type:'huntHub',x:24,y:10,label:'사냥터',ico:'🗺️'},
+    {type:'mazeHub',x:24,y:14,label:'미로',ico:'🌀'},
     {type:'portal',x:2,y:10,to:'towerEntry',label:'마탑 입구',ico:'🏰'},
     {type:'shop',x:7,y:6,ico:'🧪',label:'상점'},
     {type:'trainer',x:11,y:6,ico:'📖',label:'스킬 수련소'},
@@ -362,7 +484,7 @@ function buildTower(floor){
   for(let x=1;x<W-1;x++)if(x%5===0){g[1][x]=4;g[H-2][x]=4;}
   const boss=floor%5===0;
   const objs=[
-    {type:'stairs',x:W-3,y:2,to:floor>=30?'win':'towerUp',label:floor>=30?'정점':'위층',ico:'🔼',locked:true},
+    {type:'stairs',x:W-3,y:2,to:floor>=300?'win':'towerUp',label:floor>=300?'정점':'위층',ico:'🔼',locked:true},
     {type:'portal',x:2,y:H-3,to:'village',label:'탈출',ico:'🚪'},
   ];
   return finalize({name:'마탑 '+floor+'층',sub:el.name,elIcon:el.icon,glow:t.glow,
@@ -372,16 +494,17 @@ function buildTower(floor){
 
 /* ---------- 맵 캐시 ---------- */
 const VILLAGE=buildVillage();
-const huntMaps={}, towerMaps={};
+const huntMaps={}, towerMaps={}, mazeMaps={};
 function getHunt(id){if(!huntMaps[id])huntMaps[id]=buildHunt(HUNT_ZONES.find(z=>z.id===id));return huntMaps[id];}
 function getTower(f){if(!towerMaps[f])towerMaps[f]=buildTower(f);return towerMaps[f];}
-function getInstMap(area,ref){return area==='village'?VILLAGE:area==='hunting'?getHunt(ref):getTower(ref);}
+function getMaze(id){if(!mazeMaps[id])mazeMaps[id]=buildMaze(MAZE_ZONES.find(z=>z.id===id));return mazeMaps[id];}
+function getInstMap(area,ref){return area==='village'?VILLAGE:area==='hunting'?getHunt(ref):area==='maze'?getMaze(ref):getTower(ref);}
 
 /* ---------- 상태 ---------- */
 const me={id:'me',name:'마법사',robe:chosenRobe,cls:'mage',wpn:'🔮',x:0,y:0,face:'down',moving:false,anim:0,
   lvl:1,exp:0,expMax:24,hp:90,hpMax:90,mp:70,mpMax:70,atk:14,def:3,gold:30,
-  sp:0,learned:[],cd:{},buffAtkT:0,buffAtkMul:1,shieldT:0,
-  area:'village',floor:0,huntId:'forest',attackT:0,deadT:0};
+  sp:0,learned:[],cd:{},buffAtkT:0,buffAtkMul:1,shieldT:0,buffDefT:0,buffDefAdd:0,hasteT:0,regenT:0,regenAmt:0,regenAcc:0,
+  area:'village',floor:0,huntId:'forest',mazeId:'hedge',attackT:0,deadT:0};
 let maxFloor=0;
 let mode='solo',roomCode=null,isHost=true;
 const remotes={},conns={};
@@ -391,43 +514,47 @@ const HUNT_RESET_MS=45000;
 let projectiles=[],floats=[],effects=[];
 const keys={};let chatting=false,gameStarted=false;
 
-function instKeyOf(s){return s.area==='tower'?'tower:'+s.floor:s.area==='hunting'?'hunt:'+s.huntId:'village';}
+function instKeyOf(s){return s.area==='tower'?'tower:'+s.floor:s.area==='hunting'?'hunt:'+s.huntId:s.area==='maze'?'maze:'+s.mazeId:'village';}
 function curKey(){return instKeyOf(me);}
 function sameInst(r){return instKeyOf(r)===curKey();}
-function currentMap(){return getInstMap(me.area,me.area==='tower'?me.floor:me.huntId);}
+function refOf(s){return s.area==='tower'?s.floor:s.area==='maze'?s.mazeId:s.huntId;}
+function currentMap(){return getInstMap(me.area,refOf(me));}
 
 /* ---------- 몬스터 스폰 ---------- */
 function spawnMonsters(area,ref){
-  const key=area==='tower'?'tower:'+ref:'hunt:'+ref;
+  const key=area==='tower'?'tower:'+ref:area==='maze'?'maze:'+ref:'hunt:'+ref;
   if(monsterSets[key])return monsterSets[key];
   const list=[],map=getInstMap(area,ref);
   let pool,tier,bossKey=null,finalKey=null;
   if(area==='tower'){
     const el=elementOf(ref);pool=el.pool;tier=ref;
-    if(ref>=30)finalKey='lord'; else if(ref%5===0)bossKey=el.boss;
-  } else {const z=HUNT_ZONES.find(x=>x.id===ref);pool=z.pool;tier=z.tier;}
+    if(ref>=300)finalKey='voidsovereign'; else if(ref%50===0)bossKey='lord'; else if(ref%5===0)bossKey=el.boss;
+  } else if(area==='maze'){const z=MAZE_ZONES.find(x=>x.id===ref);pool=z.pool;tier=z.tier;}
+  else {const z=HUNT_ZONES.find(x=>x.id===ref);pool=z.pool;tier=z.tier;}
   function place(tk,scaleTier,isBoss){
     let tx,ty,tries=0;
     do{tx=2+Math.floor(Math.random()*(map.W-4));ty=2+Math.floor(Math.random()*(map.H-4));tries++;}
-    while(isWall(map,tx,ty)&&tries<60);
-    const b=MTYPES[tk],sc=1+(scaleTier-1)*0.16;
+    while(isWall(map,tx,ty)&&tries<120);
+    if(isWall(map,tx,ty))return;
+    const b=MTYPES[tk],sc=1+Math.pow(Math.max(0,scaleTier-1),0.9)*0.2;
     list.push({id:key+'_'+list.length+'_'+Math.floor(Math.random()*9999),t:tk,ico:b.ico,
       x:tx*TILE+TILE/2,y:ty*TILE+TILE/2,hp:Math.round(b.hp*sc),hpMax:Math.round(b.hp*sc),
       atk:Math.round(b.atk*sc),spd:b.spd,r:b.r,
-      exp:Math.round(b.exp*(1+(scaleTier-1)*0.1)),gold:Math.round(b.gold*(1+(scaleTier-1)*0.1)),
+      exp:Math.round(b.exp*(1+(scaleTier-1)*0.13)),gold:Math.round(b.gold*(1+(scaleTier-1)*0.13)),
       atkT:0,hurtT:0,wanderX:0,wanderY:0,wt:0,boss:!!isBoss});
   }
   if(finalKey){place(finalKey,tier,true);}
-  else if(bossKey){place(bossKey,tier,true);for(let i=0;i<3;i++)place(pool[i%pool.length],tier);}
-  else{const n=area==='tower'?4+Math.floor(tier/6):8+Math.floor(Math.random()*3);
+  else if(bossKey){place(bossKey,tier,true);const adds=Math.min(8,2+Math.floor(tier/35));for(let i=0;i<adds;i++)place(pool[i%pool.length],tier);}
+  else{const n=area==='tower'?Math.min(16,4+Math.floor(tier/10)):area==='maze'?10+Math.floor(Math.random()*4):8+Math.floor(Math.random()*3);
     for(let i=0;i<n;i++)place(pool[i%pool.length],tier);}
   monsterSets[key]=list;lastSpawn[key]=Date.now();return list;
 }
 function resetHuntingZones(){const now=Date.now();
-  for(const z of HUNT_ZONES){const key='hunt:'+z.id;
+  const insts=[...HUNT_ZONES.map(z=>['hunting',z.id]),...MAZE_ZONES.map(z=>['maze',z.id])];
+  for(const [ar,id] of insts){const key=(ar==='maze'?'maze:':'hunt:')+id;
     if(monsterSets[key]&&now-(lastSpawn[key]||0)>HUNT_RESET_MS){
-      delete monsterSets[key];spawnMonsters('hunting',z.id);
-      if(curKey()===key)toast('🌿 사냥터에 마물이 다시 모여듭니다');}}}
+      delete monsterSets[key];spawnMonsters(ar,id);
+      if(curKey()===key)toast(ar==='maze'?'🌀 미로에 마물이 다시 모여듭니다':'🌿 사냥터에 마물이 다시 모여듭니다');}}}
 
 /* ---------- 이동/충돌 ---------- */
 function solidAt(map,px,py){return isWall(map,Math.floor(px/TILE),Math.floor(py/TILE));}
@@ -475,15 +602,15 @@ function updateCooldowns(){document.querySelectorAll('#skillbar .skill').forEach
 /* ---------- 직업 & 스킬 ---------- */
 const CLASSES={
   mage:{name:'마법사',ico:'🧙',wpn:'🔮',hp:90,mp:70,atk:14,def:3,grow:{hp:16,mp:11,atk:4,def:1},
-    robe:'#9d7bff',desc:'원거리 마법 / 풍부한 마나',skills:['fireball','frostbolt','blink','meteor']},
+    robe:'#9d7bff',desc:'원거리 마법 / 풍부한 마나',skills:['fireball','arcanebolt','frostbolt','blink','sparknova','meteor','inferno']},
   warrior:{name:'전사',ico:'⚔️',wpn:'⚔️',hp:150,mp:30,atk:18,def:6,grow:{hp:24,mp:5,atk:5,def:2},
-    robe:'#ff6b6b',desc:'높은 체력 / 근접 강타',skills:['cleave','charge','warcry','whirlwind']},
+    robe:'#ff6b6b',desc:'높은 체력 / 근접 강타',skills:['cleave','bash','charge','bloodthirst','warcry','ironskin','whirlwind','earthshatter']},
   archer:{name:'궁수',ico:'🏹',wpn:'🏹',hp:105,mp:45,atk:16,def:4,grow:{hp:18,mp:7,atk:5,def:1},
-    robe:'#7bffae',desc:'빠른 원거리 견제',skills:['arrow','dash','multishot','poison']},
+    robe:'#7bffae',desc:'빠른 원거리 견제',skills:['arrow','dash','multishot','piercer','hawkeye','poison','volley']},
   priest:{name:'성직자',ico:'✨',wpn:'✨',hp:115,mp:80,atk:11,def:4,grow:{hp:18,mp:11,atk:3,def:1},
-    robe:'#5ad6ff',desc:'회복 / 보조 / 신성 공격',skills:['smite','heal','barrier','holylight']},
+    robe:'#5ad6ff',desc:'회복 / 보조 / 신성 공격',skills:['smite','heal','regen','barrier','blessing','holylight','judgment','sanctuary']},
 };
-const SLOT_KEYS=['j','k','l','u','i'];
+const SLOT_KEYS=['j','k','l','u','i','o','p'];
 let chosenClass='mage';
 (function buildClassGrid(){const grid=document.getElementById('classGrid');
   Object.entries(CLASSES).forEach(([key,c])=>{const d=document.createElement('div');
@@ -499,26 +626,40 @@ function faceVec(off){let a=me.face==='up'?-Math.PI/2:me.face==='down'?Math.PI/2
   a+=off||0;return{x:Math.cos(a),y:Math.sin(a)};}
 
 const SKILLS={
-  // 마법사
+  // ===== 마법사 =====
   fireball:{name:'파이어볼',ico:'🔥',mp:8,cd:0.4,reqLv:1,run:()=>shoot('🔥','#ff8a3a',Math.round(ea()*1.6)+rnd(8),7)},
+  arcanebolt:{name:'비전탄',ico:'🔮',mp:13,cd:0.8,reqLv:3,run:()=>shoot('🔮','#c89bff',Math.round(ea()*2.2)+rnd(10),8)},
   frostbolt:{name:'얼음화살',ico:'❄️',mp:10,cd:0.6,reqLv:4,run:()=>shoot('❄️','#8fdcff',Math.round(ea()*1.9)+rnd(8),6.5)},
   blink:{name:'점멸',ico:'🌀',mp:12,cd:5,reqLv:6,run:()=>dashMove(160,0)},
+  sparknova:{name:'전격 폭발',ico:'⚡',mp:22,cd:5,reqLv:8,run:()=>novaCast('⚡','#ffe65a',Math.round(ea()*1.5)+rnd(8),7,8)},
   meteor:{name:'메테오',ico:'☄️',mp:26,cd:6,reqLv:10,run:()=>aoe(96,Math.round(ea()*3),'rgba(255,120,40,.4)')},
-  // 전사
+  inferno:{name:'인페르노',ico:'🌋',mp:36,cd:9,reqLv:16,run:()=>aoe(124,Math.round(ea()*4),'rgba(255,80,30,.45)')},
+  // ===== 전사 =====
   cleave:{name:'베기',ico:'⚔️',mp:3,cd:0.45,reqLv:1,run:()=>meleeArc(52,46,Math.round(ea()*1.3)+rnd(6))},
+  bash:{name:'강타',ico:'🔨',mp:7,cd:2.5,reqLv:3,run:()=>meleeArc(56,50,Math.round(ea()*2.2)+rnd(8))},
   charge:{name:'돌진',ico:'💨',mp:10,cd:4,reqLv:4,run:()=>dashMove(190,Math.round(ea()*1.6))},
+  bloodthirst:{name:'피의 갈망',ico:'🩸',mp:14,cd:7,reqLv:7,run:()=>lifestealArc(56,50,Math.round(ea()*1.8)+rnd(6),0.6)},
   warcry:{name:'전투의 함성',ico:'📢',mp:15,cd:12,reqLv:8,run:()=>{buffAtk(1.5,8);toast('⚔️ 공격력 상승!');}},
+  ironskin:{name:'강철 피부',ico:'🛡️',mp:16,cd:14,reqLv:10,run:()=>{defBuff(12,10);toast('🛡️ 방어력 상승!');}},
   whirlwind:{name:'회전베기',ico:'🌪️',mp:20,cd:6,reqLv:12,run:()=>aoe(82,Math.round(ea()*2),'rgba(255,90,90,.35)')},
-  // 궁수
+  earthshatter:{name:'대지 분쇄',ico:'💥',mp:30,cd:8,reqLv:15,run:()=>aoe(110,Math.round(ea()*3.2),'rgba(200,140,60,.45)')},
+  // ===== 궁수 =====
   arrow:{name:'속사',ico:'🏹',mp:4,cd:0.25,reqLv:1,run:()=>shoot('➤','#cdebff',Math.round(ea()*1.3)+rnd(5),9)},
   dash:{name:'구르기',ico:'🤸',mp:6,cd:3,reqLv:3,run:()=>dashMove(150,0)},
-  multishot:{name:'다중사격',ico:'🎯',mp:12,cd:3,reqLv:5,run:()=>{[-0.25,0,0.25].forEach(o=>shoot('➤','#cdebff',Math.round(ea()*1.2),9,o));}},
+  multishot:{name:'다중사격',ico:'🔱',mp:12,cd:3,reqLv:5,run:()=>{[-0.25,0,0.25].forEach(o=>shoot('➤','#cdebff',Math.round(ea()*1.2),9,o));}},
+  piercer:{name:'관통사격',ico:'🎯',mp:11,cd:2,reqLv:6,run:()=>shoot('➳','#9ad0ff',Math.round(ea()*2.6)+rnd(8),11)},
+  hawkeye:{name:'매의 눈',ico:'🦅',mp:16,cd:14,reqLv:8,run:()=>{buffAtk(1.4,8);me.hasteT=8;toast('🦅 공격·이동속도 상승!');}},
   poison:{name:'독화살',ico:'🟢',mp:10,cd:2,reqLv:9,run:()=>shoot('🟢','#7bffae',Math.round(ea()*2.4)+rnd(8),8)},
-  // 성직자
+  volley:{name:'화살 비',ico:'☔',mp:22,cd:5,reqLv:11,run:()=>novaCast('➤','#cdebff',Math.round(ea()*1.4)+rnd(6),9,10)},
+  // ===== 성직자 =====
   smite:{name:'천벌',ico:'⚡',mp:5,cd:0.5,reqLv:1,run:()=>meleeArc(58,44,Math.round(ea()*1.5)+rnd(6))},
   heal:{name:'치유',ico:'💚',mp:12,cd:1,reqLv:1,run:()=>healSelf(Math.round(me.hpMax*0.32))},
+  regen:{name:'재생',ico:'🌿',mp:14,cd:8,reqLv:4,run:()=>{regenOn(Math.round(me.hpMax*0.06),6);toast('🌿 재생 시작!');}},
   barrier:{name:'보호막',ico:'🛡️',mp:16,cd:10,reqLv:5,run:()=>{shieldOn(6);toast('🛡️ 보호막 전개!');}},
+  blessing:{name:'축복',ico:'🙏',mp:18,cd:14,reqLv:6,run:()=>{buffAtk(1.35,10);defBuff(8,10);toast('🙏 축복! 공격·방어 상승');}},
   holylight:{name:'성스러운 빛',ico:'🌟',mp:18,cd:5,reqLv:7,run:()=>aoe(92,Math.round(ea()*2.2),'rgba(255,230,140,.4)')},
+  judgment:{name:'심판',ico:'⚜️',mp:28,cd:7,reqLv:12,run:()=>aoe(116,Math.round(ea()*3),'rgba(255,240,170,.45)')},
+  sanctuary:{name:'성역',ico:'⛪',mp:30,cd:12,reqLv:16,run:()=>{healSelf(Math.round(me.hpMax*0.5));shieldOn(8);toast('⛪ 성역 전개!');}},
 };
 
 function useSkill(id){if(me.deadT>0)return;const s=SKILLS[id];if(!s)return;
@@ -530,7 +671,7 @@ function useSkill(id){if(me.deadT>0)return;const s=SKILLS[id];if(!s)return;
 function shoot(ico,color,dmg,speed,off){const v=faceVec(off||0);
   const p={x:me.x,y:me.y,vx:v.x*speed,vy:v.y*speed,owner:me.id,dmg,t:1.3,ico,color,pvp:mode==='pvp'};
   projectiles.push(p);me.attackT=0.2;
-  net({t:'proj',x:p.x,y:p.y,vx:p.vx,vy:p.vy,dmg,ico,color,area:me.area,floor:me.floor,huntId:me.huntId,pvp:p.pvp});}
+  net({t:'proj',x:p.x,y:p.y,vx:p.vx,vy:p.vy,dmg,ico,color,area:me.area,floor:me.floor,huntId:me.huntId,mazeId:me.mazeId,pvp:p.pvp});}
 function meleeArc(reach,rad,dmg){me.attackT=0.32;const v=faceVec();const ax=me.x+v.x*reach,ay=me.y+v.y*reach;
   hitMonsters(ax,ay,rad,dmg);if(mode==='pvp')hitPlayers(ax,ay,rad,dmg);
   effects.push({x:ax,y:ay,r:rad,t:0.2,color:'rgba(90,214,255,.4)'});}
@@ -547,7 +688,19 @@ function healSelf(amt){if(me.hp>=me.hpMax){toast('체력이 가득 찼어요');r
   me.hp=Math.min(me.hpMax,me.hp+amt);float(me.x,me.y-20,'+'+amt,'#7bffae');}
 function buffAtk(mul,dur){me.buffAtkMul=mul;me.buffAtkT=dur;}
 function shieldOn(dur){me.shieldT=dur;}
-function takeDamage(raw){let dmg=Math.max(1,Math.round(raw)-me.def);if(me.shieldT>0)dmg=Math.round(dmg*0.4);
+function defBuff(add,dur){me.buffDefAdd=add;me.buffDefT=dur;}
+function effDef(){return me.def+(me.buffDefT>0?me.buffDefAdd:0);}
+function regenOn(amt,dur){me.regenAmt=amt;me.regenT=dur;me.regenAcc=0;}
+// 절대 각도로 투사체 발사 (방사형 스킬용)
+function shootAng(ang,ico,color,dmg,speed){const vx=Math.cos(ang)*speed,vy=Math.sin(ang)*speed;
+  const p={x:me.x,y:me.y,vx,vy,owner:me.id,dmg,t:1.3,ico,color,pvp:mode==='pvp'};projectiles.push(p);
+  net({t:'proj',x:p.x,y:p.y,vx:p.vx,vy:p.vy,dmg,ico,color,area:me.area,floor:me.floor,huntId:me.huntId,mazeId:me.mazeId,pvp:p.pvp});}
+function novaCast(ico,color,dmg,speed,count){me.attackT=0.25;
+  for(let i=0;i<count;i++)shootAng(i/count*Math.PI*2,ico,color,dmg,speed);
+  effects.push({x:me.x,y:me.y,r:32,t:0.25,color});}
+function lifestealArc(reach,rad,dmg,leech){meleeArc(reach,rad,dmg);const got=Math.round(dmg*leech);
+  if(got>0&&me.hp<me.hpMax){me.hp=Math.min(me.hpMax,me.hp+got);float(me.x,me.y-20,'+'+got,'#7bffae');}}
+function takeDamage(raw){let dmg=Math.max(1,Math.round(raw)-effDef());if(me.shieldT>0)dmg=Math.round(dmg*0.4);
   me.hp-=dmg;float(me.x,me.y-24,String(dmg),me.shieldT>0?'#8fdcff':'#ff8a98');if(me.hp<=0&&me.deadT<=0)die();}
 
 function hitMonsters(x,y,rad,dmg){const set=monsterSets[curKey()];if(!set)return;
@@ -564,7 +717,7 @@ function gainReward(exp,gold){me.exp+=exp;me.gold+=gold;float(me.x,me.y-30,'+'+e
   while(me.exp>=me.expMax)levelUp();updateHUD();saveGame();}
 function levelUp(){me.exp-=me.expMax;me.lvl++;me.expMax=Math.round(me.expMax*1.35+10);
   const g=(CLASSES[me.cls]||CLASSES.mage).grow;
-  me.hpMax+=g.hp;me.mpMax+=g.mp;me.atk+=g.atk;me.def+=g.def;me.hp=me.hpMax;me.mp=me.mpMax;me.sp++;
+  me.hpMax+=g.hp;me.mpMax+=g.mp;me.atk+=g.atk;me.def+=g.def;me.hp=Math.min(me.hpMax,me.hp+Math.round(me.hpMax*0.5));me.mp=me.mpMax;me.sp++;
   toast('🔆 레벨 업! Lv '+me.lvl+' (✦ 스킬포인트 +1)');float(me.x,me.y-40,'LEVEL UP','#ffd36b');}
 function hitPlayers(x,y,rad,dmg){for(const id in remotes){const r=remotes[id];if(!sameInst(r))continue;
   if(Math.hypot(r.x-x,r.y-y)<rad+12){net({t:'pvp',target:id,dmg,by:me.id});float(r.x,r.y-24,String(dmg),'#ff6b6b');}}}
@@ -575,6 +728,7 @@ function nearObj(){const map=currentMap();for(const o of map.objs){
 function interact(){if(me.deadT>0)return;const o=nearObj();if(!o)return;
   if(o.type==='portal'){if(o.to==='village')changeArea('village');else if(o.to==='towerEntry')changeArea('tower',1);}
   else if(o.type==='huntHub')openRegion();
+  else if(o.type==='mazeHub')openMaze();
   else if(o.type==='shop')openShop();
   else if(o.type==='trainer')openTrainer();
   else if(o.type==='healer'){me.hp=me.hpMax;me.mp=me.mpMax;toast('체력과 마나를 모두 회복했어요');saveGame();}
@@ -583,15 +737,16 @@ function interact(){if(me.deadT>0)return;const o=nearObj();if(!o)return;
     if(o.to==='win')winGame();else changeArea('tower',me.floor+1);}}
 function changeArea(area,ref){
   me.area=area;
-  if(area==='tower')me.floor=ref;else if(area==='hunting'){me.huntId=ref;me.floor=0;}else me.floor=0;
-  const map=getInstMap(area,area==='tower'?me.floor:me.huntId);
+  if(area==='tower')me.floor=ref;else if(area==='hunting'){me.huntId=ref;me.floor=0;}else if(area==='maze'){me.mazeId=ref;me.floor=0;}else me.floor=0;
+  const map=getInstMap(area,refOf(me));
   const sp=safeSpawn(map);me.x=sp.x*TILE+TILE/2;me.y=sp.y*TILE+TILE/2;
-  if(map.mon&&isHost)spawnMonsters(area,area==='tower'?me.floor:me.huntId);
+  if(map.mon&&isHost)spawnMonsters(area,refOf(me));
   projectiles=[];
   if(area==='tower'&&me.floor>maxFloor)maxFloor=me.floor;
   updateHUD();saveGame();
   if(area==='tower')banner('마탑 '+me.floor+'층 · '+map.sub,map.boss?'⚠️ '+map.elIcon+' 보스가 기다린다':map.elIcon+' 몬스터를 처치하고 위층으로');
   else if(area==='hunting')banner(map.name,'몬스터를 사냥해 성장하세요');
+  else if(area==='maze')banner(map.name,'🌀 미로를 헤치며 몬스터를 사냥하세요');
   else banner('마탑의 도시','안전한 마을입니다');}
 
 /* ---------- 상점/지역/현자 ---------- */
@@ -621,7 +776,7 @@ function openTrainer(){const list=document.getElementById('skillList');list.inne
     else if(me.lvl<s.reqLv){b.className='btn ghost';b.textContent='Lv '+s.reqLv;b.disabled=true;}
     else{b.textContent='배우기 (1✦)';b.onclick=()=>{
       if(me.sp<1){toast('스킬포인트가 부족해요');return;}
-      if(me.learned.length>=5){toast('스킬 슬롯이 가득 찼어요');return;}
+      if(me.learned.length>=7){toast('스킬 슬롯이 가득 찼어요 (최대 7)');return;}
       me.sp--;me.learned.push(id);buildSkillBar();updateHUD();saveGame();toast('✦ '+s.name+' 습득!');openTrainer();};}
     d.appendChild(b);list.appendChild(d);});
   showModal('skillModal');}
@@ -632,9 +787,16 @@ function openRegion(){const list=document.getElementById('regionList');list.inne
     b.onclick=()=>{closeModal();changeArea('hunting',z.id);};
     d.appendChild(b);list.appendChild(d);});
   showModal('regionModal');}
+function openMaze(){const list=document.getElementById('mazeList');list.innerHTML='';
+  MAZE_ZONES.forEach(z=>{const d=document.createElement('div');d.className='row2';
+    d.innerHTML='<div class="ico">'+z.icon+'</div><div class="info"><b>'+z.name+'</b><small>권장 Lv '+z.recLv+'</small></div>';
+    const b=document.createElement('button');b.className='btn';b.textContent='입장';
+    b.onclick=()=>{closeModal();changeArea('maze',z.id);};
+    d.appendChild(b);list.appendChild(d);});
+  showModal('mazeModal');}
 function openSage(){document.getElementById('npcFace').textContent='🧙';
   document.getElementById('npcName').textContent='마탑의 현자';
-  document.getElementById('npcText').textContent='마탑은 30층, 불·물·전기·흙·공기·어둠 여섯 속성이 다섯 층씩 자리잡고 있네. 다섯 층마다 속성의 보스가, 정점에는 마도의 군주가 기다리지. 현재 최고 도달은 '+(maxFloor||0)+'층일세.';
+  document.getElementById('npcText').textContent='마탑은 무려 300층, 불·물·전기·흙·공기·어둠·얼음·독·강철·신성·환영·공허 열두 속성이 다섯 층씩 끝없이 순환하네. 다섯 층마다 속성의 보스가, 50층마다 마도의 군주가, 그리고 정점 300층에는 공허의 지배자가 기다리지. 현재 최고 도달은 '+(maxFloor||0)+'층일세.';
   const bx=document.getElementById('npcButtons');bx.innerHTML='';
   const b1=document.createElement('button');b1.className='btn';b1.textContent='1층부터 입장';
   b1.onclick=()=>{closeModal();changeArea('tower',1);};bx.appendChild(b1);
@@ -647,7 +809,7 @@ function closeModal(){document.querySelectorAll('.modal').forEach(m=>m.style.dis
 /* ---------- 사망/승리 ---------- */
 function die(){me.deadT=2.5;banner('쓰러졌다...','마을로 돌아갑니다');}
 function respawn(){me.hp=me.hpMax;me.mp=me.mpMax;changeArea('village');}
-function winGame(){banner('🏆 마도의 군주 격파!','당신은 마탑의 정점에 올랐습니다');}
+function winGame(){banner('🏆 공허의 지배자 격파!','당신은 마탑 300층의 정점에 올랐습니다');}
 
 /* ---------- IndexedDB 저장 ---------- */
 let DB=null;
@@ -681,7 +843,7 @@ function net(msg){msg._from=me.id;
   if(isHost){for(const id in conns)try{conns[id].send(msg);}catch(e){}}
   else if(hostConn){try{hostConn.send(msg);}catch(e){}}}
 function myStateMsg(){return{t:'state',id:me.id,name:me.name,robe:me.robe,cls:me.cls,wpn:me.wpn,x:me.x,y:me.y,face:me.face,
-  moving:me.moving,anim:me.anim,lvl:me.lvl,hp:me.hp,hpMax:me.hpMax,area:me.area,floor:me.floor,huntId:me.huntId,attackT:me.attackT};}
+  moving:me.moving,anim:me.anim,lvl:me.lvl,hp:me.hp,hpMax:me.hpMax,area:me.area,floor:me.floor,huntId:me.huntId,mazeId:me.mazeId,attackT:me.attackT};}
 function startSolo(){isHost=true;mode='solo';enterGame();}
 function createRoom(rmode){mode=rmode;isHost=true;roomCode=String(Math.floor(1000+Math.random()*9000));
   netStatus('연결 중...');
@@ -706,7 +868,7 @@ function onData(d,conn){const from=conn.peer;
   switch(d.t){
     case 'state':remotes[from]=Object.assign(remotes[from]||{},d,{id:from});
       if(isHost)for(const id in conns)if(id!==from)try{conns[id].send(d);}catch(e){}break;
-    case 'proj':if(d.area===me.area&&d.floor===me.floor&&d.huntId===me.huntId)
+    case 'proj':if(d.area===me.area&&d.floor===me.floor&&d.huntId===me.huntId&&(d.area!=='maze'||d.mazeId===me.mazeId))
         projectiles.push({x:d.x,y:d.y,vx:d.vx,vy:d.vy,owner:from,dmg:d.dmg,t:1.3,ico:d.ico,color:d.color,pvp:d.pvp,remote:true});
       if(isHost)for(const id in conns)if(id!==from)try{conns[id].send(d);}catch(e){}break;
     case 'chat':addChat(d.name,d.msg);if(isHost)for(const id in conns)if(id!==from)try{conns[id].send(d);}catch(e){}break;
@@ -773,7 +935,7 @@ document.getElementById('startBtn').onclick=()=>{
     me.cls=chosenClass;me.wpn=C.wpn;me.robe=chosenRobe;
     me.hpMax=C.hp;me.mpMax=C.mp;me.hp=C.hp;me.mp=C.mp;me.atk=C.atk;me.def=C.def;
     me.lvl=1;me.exp=0;me.expMax=24;me.gold=30;me.sp=0;me.learned=[C.skills[0]];}
-  me.cd={};me.buffAtkT=0;me.shieldT=0;
+  me.cd={};me.buffAtkT=0;me.shieldT=0;me.buffDefT=0;me.hasteT=0;me.regenT=0;
   if(startMode==='solo')startSolo();
   else if(startMode==='create')createRoom(document.getElementById('roomMode').value);
   else{const code=(document.getElementById('joinCode').value||'').trim();
@@ -800,6 +962,9 @@ function update(dt){
   me.mp=Math.min(me.mpMax,me.mp+dt*3);
   for(const id in me.cd){if(me.cd[id]>0){me.cd[id]-=dt;if(me.cd[id]<0)me.cd[id]=0;}}
   if(me.buffAtkT>0)me.buffAtkT-=dt;if(me.shieldT>0)me.shieldT-=dt;
+  if(me.buffDefT>0)me.buffDefT-=dt;if(me.hasteT>0)me.hasteT-=dt;
+  if(me.regenT>0){me.regenT-=dt;me.regenAcc+=dt;if(me.regenAcc>=0.5){me.regenAcc-=0.5;
+    if(me.hp<me.hpMax){me.hp=Math.min(me.hpMax,me.hp+me.regenAmt);float(me.x,me.y-20,'+'+me.regenAmt,'#7bffae');}}}
   for(const ef of effects)ef.t-=dt;effects=effects.filter(e=>e.t>0);
   if(isHost)resetHuntingZones();
   let dx=0,dy=0;
@@ -810,7 +975,7 @@ function update(dt){
   const m=Math.hypot(dx,dy);me.moving=m>0.1;
   if(me.moving){dx/=m;dy/=m;
     if(Math.abs(dx)>Math.abs(dy))me.face=dx<0?'left':'right';else me.face=dy<0?'up':'down';
-    const spd=170*dt,map=currentMap();
+    const spd=170*(me.hasteT>0?1.4:1)*dt,map=currentMap();
     if(canMove(map,me.x+dx*spd,me.y))me.x+=dx*spd;if(canMove(map,me.x,me.y+dy*spd))me.y+=dy*spd;me.anim+=dt*10;}
   const map=currentMap();
   for(const p of projectiles){p.x+=p.vx;p.y+=p.vy;p.t-=dt;if(solidAt(map,p.x,p.y))p.t=0;
@@ -825,13 +990,46 @@ function update(dt){
   if(mode!=='solo'){netT-=dt;if(netT<=0){netT=0.08;net(myStateMsg());}
     if(isHost){monBroadcastT-=dt;if(monBroadcastT<=0){monBroadcastT=0.1;broadcastMonsters();}}}
   updateCooldowns();updateHUD();}
+// 시야 판정: 두 점 사이 직선에 벽이 없으면 true (있으면 길찾기 필요)
+function losClear(map,x0,y0,x1,y1){
+  const dx=x1-x0,dy=y1-y0,d=Math.hypot(dx,dy),steps=Math.max(1,Math.ceil(d/(TILE*0.4)));
+  for(let i=1;i<steps;i++){const t=i/steps;if(solidAt(map,x0+dx*t,y0+dy*t))return false;}
+  return true;}
+// BFS 길찾기: 시작 타일에서 목표 타일로 가는 '다음 한 칸'을 반환
+function bfsNextTile(map,sx,sy,gx,gy){
+  if((sx===gx&&sy===gy)||isWall(map,gx,gy))return null;
+  const W=map.W,H=map.H,key=(x,y)=>y*W+x;
+  const prev=new Map();prev.set(key(sx,sy),null);
+  const q=[[sx,sy]];let head=0,budget=1500,found=false;
+  const dirs=[[1,0],[-1,0],[0,1],[0,-1]];
+  while(head<q.length&&budget-->0){const cur=q[head++];
+    if(cur[0]===gx&&cur[1]===gy){found=true;break;}
+    for(const dr of dirs){const nx=cur[0]+dr[0],ny=cur[1]+dr[1];
+      if(nx<0||ny<0||nx>=W||ny>=H||isWall(map,nx,ny))continue;
+      const k=key(nx,ny);if(prev.has(k))continue;prev.set(k,cur);q.push([nx,ny]);}}
+  if(!found)return null;
+  let cur=[gx,gy];while(true){const p=prev.get(key(cur[0],cur[1]));
+    if(!p)return null;if(p[0]===sx&&p[1]===sy)return {x:cur[0],y:cur[1]};cur=p;}}
 function updateMonsters(dt){const set=monsterSets[curKey()];if(!set)return;
   const map=currentMap();
   const players=[{id:me.id,x:me.x,y:me.y,me:true}];
   for(const id in remotes){const r=remotes[id];if(sameInst(r))players.push({id,x:r.x,y:r.y});}
   for(const mo of set){if(mo.hp<=0)continue;if(mo.hurtT>0)mo.hurtT-=dt;if(mo.atkT>0)mo.atkT-=dt;
     let tgt=null,bd=1e9;for(const p of players){const d=Math.hypot(p.x-mo.x,p.y-mo.y);if(d<bd){bd=d;tgt=p;}}
-    if(tgt&&bd<280){const ang=Math.atan2(tgt.y-mo.y,tgt.x-mo.x),sp=mo.spd*60*dt;
+    if(tgt&&bd<280){const sp=mo.spd*60*dt;
+      let aimx=tgt.x,aimy=tgt.y;
+      // 벽에 가로막히면 BFS로 다음 통로 칸을 향한다 (주기적·도착 시 갱신)
+      if(!losClear(map,mo.x,mo.y,tgt.x,tgt.y)){
+        const gtx=Math.floor(tgt.x/TILE),gty=Math.floor(tgt.y/TILE);
+        mo.pathT=(mo.pathT||0)-dt;
+        const reached=mo.wayx!=null&&Math.hypot(mo.wayx-mo.x,mo.wayy-mo.y)<6;
+        if(mo.pathT<=0||mo.pgx!==gtx||mo.pgy!==gty||reached){
+          mo.pathT=0.4;mo.pgx=gtx;mo.pgy=gty;
+          const nt=bfsNextTile(map,Math.floor(mo.x/TILE),Math.floor(mo.y/TILE),gtx,gty);
+          if(nt){mo.wayx=nt.x*TILE+TILE/2;mo.wayy=nt.y*TILE+TILE/2;}else{mo.wayx=null;mo.wayy=null;}}
+        if(mo.wayx!=null){aimx=mo.wayx;aimy=mo.wayy;}
+      } else {mo.wayx=null;mo.wayy=null;}
+      const ang=Math.atan2(aimy-mo.y,aimx-mo.x);
       const nx=mo.x+Math.cos(ang)*sp,ny=mo.y+Math.sin(ang)*sp;
       if(!solidAt(map,nx,mo.y))mo.x=nx;if(!solidAt(map,mo.x,ny))mo.y=ny;
       if(bd<mo.r+22&&mo.atkT<=0){mo.atkT=1.0;
